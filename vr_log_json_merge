@@ -1,0 +1,76 @@
+import json
+
+# JSON 파일 읽기 함수
+def read_json(file_path):
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+# JSON 파일 쓰기 함수
+def write_json(data, file_path):
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=4)
+
+# 마지막 값 탐색 함
+def get_last_values(json_data, fields):
+    last_values = {}  # 유효한 마지막 값을 저장할 딕셔너리
+
+    # 역순으로 탐색
+    for entry in reversed(json_data):
+        for field in fields:
+            if field not in last_values:  # 아직 값을 찾지 않은 필드만 처리
+                if field in entry and isinstance(entry[field], (int, float)):
+                    last_values[field] = entry[field]  # 숫자 값을 찾으면 저장
+
+    # 찾지 못한 필드는 None으로 초기화
+    for field in fields:
+        if field not in last_values:
+            last_values[field] = None
+
+    return last_values
+
+# JSON 병합 함수
+def merge_json(json1, json2):
+    # 첫 번째 JSON의 마지막 값을 가져오기
+    last_time = json1[-1]['timeSecs']  # 마지막 timeSecs 값
+    
+    fields = ['iTrial', 'iTrial1', 'iTrial2', 'iCorrect', 'iCorrect1', 'iCorrect2', 'iReward']
+    last_values = get_last_values(json1, fields)
+
+    # 두 번째 JSON 수정
+    for entry in json2:
+        # timeSecs는 항상 존재하므로 누적 합산
+        entry['timeSecs'] += last_time
+
+        # 나머지 필드 처리
+        for field in fields:
+            if field in entry:
+                if isinstance(entry[field], (int, float)):
+                    # 숫자 값이면 누적
+                    entry[field] += last_values[field]
+                else:
+                    # 비어 있는 값("", null 등)은 그대로 유지
+                    continue
+
+    # 두 JSON 합치기
+    merged_json = json1 + json2
+    return merged_json
+ 
+
+# JSON 파일 경로
+file1_path = 'path/to/json1'
+file2_path = 'path/to/json2'
+output_path = 'output_file_name'
+
+# JSON 파일 읽기
+json1 = read_json(file1_path)
+json2 = read_json(file2_path)
+
+
+
+# JSON 합치기
+merged_json = merge_json(json1, json2)
+
+# 결과 JSON 저장
+write_json(merged_json, output_path)
+
+print(f"Merged JSON saved to {output_path}")
